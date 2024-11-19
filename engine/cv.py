@@ -83,12 +83,31 @@ def apply_texture_to_white_areas(texture, origin_mask, product_image, debug=Fals
     
     # 텍스처 적용 시간 측정
     apply_start = time.time()
+    
+    # 마스크 영역 내에서만 텍스처와 원본 마스크 블렌딩
     texture_crop = cv2.bitwise_and(stretched_texture, stretched_texture, mask=mask)
-    # 원본 마스크의 색 대비를 더 극적으로 조정
-    contrast_mask = cv2.convertScaleAbs(origin_mask, alpha=1.5, beta=0)
-    if debug:
-        cv2.imwrite('debug_06_contrast_mask.png', contrast_mask)
-    texture_applied = cv2.addWeighted(texture_crop, 0.6, origin_mask, 0.4, 0)
+    masked_origin = cv2.bitwise_and(origin_mask, origin_mask, mask=mask)
+    
+    # 경계 부분 블러 처리
+    texture_crop = cv2.GaussianBlur(texture_crop, (3,3), 0)
+    
+    # 대비 조정
+    contrast_mask = cv2.convertScaleAbs(masked_origin, alpha=1.5, beta=0)
+    
+    # 마스크 영역 내에서만 블렌딩
+    texture_applied = cv2.addWeighted(texture_crop, 0.7, contrast_mask, 0.3, 0)
+    
+    # float32로 변환하여 연산 수행
+    texture_applied = texture_applied.astype(np.float32)
+    gradient_mask = cv2.GaussianBlur(white_mask, (15,15), 0)
+    gradient_mask_3channel = cv2.cvtColor(gradient_mask, cv2.COLOR_GRAY2BGR).astype(np.float32) / 255.0
+    
+    # multiply 연산 수행
+    texture_applied = cv2.multiply(texture_applied, gradient_mask_3channel)
+    
+    # 결과를 다시 uint8로 변환
+    texture_applied = np.clip(texture_applied, 0, 255).astype(np.uint8)
+    
     if debug:
         print(f"텍스처 적용 시간: {time.time() - apply_start:.3f}초")
     
@@ -110,7 +129,7 @@ def apply_texture_to_white_areas(texture, origin_mask, product_image, debug=Fals
     result = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA)
     
     # 결과 이미지에서 검은색 픽셀을 투명하게 처리
-    threshold = 10  # 검은색 판단 임계값
+    threshold = 100  # 검은색 판단 임계값
     black_pixels = np.where(
         (result[:, :, 0] <= threshold) & 
         (result[:, :, 1] <= threshold) & 
