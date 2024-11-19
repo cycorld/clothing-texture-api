@@ -46,8 +46,21 @@ pip install -r requirements.txt
 
 ### 서버 실행
 ```bash
+# 기본 실행 (8000번 포트)
 uvicorn api.main:app --reload
+
+# 다른 포트로 실행 (예: 9000번 포트)
+uvicorn api.main:app --reload --port 9000
+
+# 호스트 지정과 함께 실행 (외부 접속 허용)
+uvicorn api.main:app --reload --host 0.0.0.0 --port 9000
 ```
+
+### 주요 uvicorn 옵션
+- `--port`: 포트 번호 지정 (기본값: 8000)
+- `--host`: 호스트 주소 지정 (기본값: 127.0.0.1)
+- `--reload`: 코드 변경 시 자동 재시작
+- `--workers`: 워커 프로세스 수 지정
 
 ### API 엔드포인트
 

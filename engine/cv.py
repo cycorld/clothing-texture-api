@@ -54,8 +54,14 @@ def apply_texture_to_white_areas(texture, origin_mask, product_image, debug=Fals
     # 텍스처를 product 이미지 크기로 리사이즈
     resize_start = time.time()
     stretched_texture = cv2.resize(texture, (product_image.shape[1], product_image.shape[0]))
+    
+    # # 텍스처 45도 회전
+    # rows, cols = stretched_texture.shape[:2]
+    # rotation_matrix = cv2.getRotationMatrix2D((cols/2, rows/2), 45, 1)
+    # stretched_texture = cv2.warpAffine(stretched_texture, rotation_matrix, (cols, rows))
+    
     if debug:
-        print(f"텍스처 리사이즈 시간: {time.time() - resize_start:.3f}초")
+        print(f"텍스처 리사이즈 및 회전 시간: {time.time() - resize_start:.3f}초")
     
     # 리사이즈된 텍스처 저장
     if debug:
@@ -82,9 +88,7 @@ def apply_texture_to_white_areas(texture, origin_mask, product_image, debug=Fals
     contrast_mask = cv2.convertScaleAbs(origin_mask, alpha=1.5, beta=0)
     if debug:
         cv2.imwrite('debug_06_contrast_mask.png', contrast_mask)
-    texture_applied = cv2.addWeighted(texture_crop, 0.9, origin_mask, 0.1, 0)
-    # texture_applied도 BGRA로 변환
-    texture_applied_rgba = cv2.cvtColor(texture_applied, cv2.COLOR_BGR2BGRA)
+    texture_applied = cv2.addWeighted(texture_crop, 0.6, origin_mask, 0.4, 0)
     if debug:
         print(f"텍스처 적용 시간: {time.time() - apply_start:.3f}초")
     
@@ -96,25 +100,23 @@ def apply_texture_to_white_areas(texture, origin_mask, product_image, debug=Fals
     if debug:
         cv2.imwrite('debug_08_inverted_mask.png', inverted_mask)  # 디버깅용 이미지 저장
     background = cv2.bitwise_and(product_image, product_image, mask=inverted_mask)
-    # 검은색을 투명으로 처리
-    # BGRA 형식으로 변환 (알파 채널 추가)
-    background_rgba = cv2.cvtColor(background, cv2.COLOR_BGR2BGRA)
-    # 검은색 픽셀을 더 정확하게 감지하고 투명하게 설정
-    # 약간의 오차를 허용하여 거의 검은색인 픽셀도 포함
-    threshold = 10  # 검은색 판단 임계값
-    black_pixels = np.where(
-        (background_rgba[:, :, 0] <= threshold) & 
-        (background_rgba[:, :, 1] <= threshold) & 
-        (background_rgba[:, :, 2] <= threshold)
-    )
-    background_rgba[black_pixels[0], black_pixels[1], 3] = 0
-    if debug:
-        cv2.imwrite('debug_09_background.png', background)  # 디버깅용 이미지 저장
 
     if debug:
         cv2.imwrite('debug_10_texture_applied.png', texture_applied)  # 디버깅용 이미지 저장
     # BGRA 형식으로 결과 합성
-    result = cv2.add(background_rgba, texture_applied_rgba)
+    result = cv2.add(background, texture_applied)
+    
+    # BGR을 BGRA로 변환 (알파 채널 추가)
+    result = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA)
+    
+    # 결과 이미지에서 검은색 픽셀을 투명하게 처리
+    threshold = 10  # 검은색 판단 임계값
+    black_pixels = np.where(
+        (result[:, :, 0] <= threshold) & 
+        (result[:, :, 1] <= threshold) & 
+        (result[:, :, 2] <= threshold)
+    )
+    result[black_pixels[0], black_pixels[1], 3] = 0  # 알파 채널을 0으로 설정하여 투명하게 만듦
     if debug:
         cv2.imwrite('debug_11_semi_result.png', result, [cv2.IMWRITE_PNG_COMPRESSION, 9])  # 디버깅용 이미지 저장
     
@@ -122,7 +124,6 @@ def apply_texture_to_white_areas(texture, origin_mask, product_image, debug=Fals
         print(f"전체 텍스처 적용 시간: {time.time() - start_time:.3f}초")
         cv2.imwrite('debug_12_last_result.png', result)
     
-    # 배경에서 검은색을 투명으로 처리
     return result  # RGBA 이미지 반환
 
 def process_image(clothing_path, product_path, output_path=None, debug=False):
