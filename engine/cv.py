@@ -129,7 +129,7 @@ def apply_texture_to_white_areas(texture, origin_mask, product_image, debug=Fals
     result = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA)
     
     # 결과 이미지에서 검은색 픽셀을 투명하게 처리
-    threshold = 100  # 검은색 판단 임계값
+    threshold = 10  # 검은색 판단 임계값
     black_pixels = np.where(
         (result[:, :, 0] <= threshold) & 
         (result[:, :, 1] <= threshold) & 
