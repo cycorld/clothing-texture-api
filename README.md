@@ -56,6 +56,18 @@ uvicorn api.main:app --reload --port 9000
 uvicorn api.main:app --reload --host 0.0.0.0 --port 9000
 ```
 
+### 데몬 서버 임시로 켜기
+```bash
+# 백그라운드로 실행
+nohup uvicorn api.main:app --host 0.0.0.0 --port 9000 > api.log 2>&1 &
+
+# 프로세스 확인
+ps aux | grep uvicorn
+
+# 종료하려면 (PID는 ps 명령어로 확인한 프로세스 ID)
+kill <PID>
+```
+
 ### 주요 uvicorn 옵션
 - `--port`: 포트 번호 지정 (기본값: 8000)
 - `--host`: 호스트 주소 지정 (기본값: 127.0.0.1)
